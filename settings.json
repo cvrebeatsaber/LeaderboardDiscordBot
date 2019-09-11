@@ -12,8 +12,9 @@
                 "Koi no Hime Hime Pettanko",
                 "Redo (TV Size)"
             ],
-            "Header": "**Collegiate VR Esports Qualification Rankings!**\n",
-            "Format": "Rank: UserName (Team) **Score** | Plays | MostRecentSubmission"
+            "Header": "**Collegiate VR Esports Qualification Rankings!**```\n",
+            "Format": "Rank: UserName | Score | AverageAccuracy | Plays | MostRecentSubmission",
+            "Footer": "\n```"
         }
     ]
 }

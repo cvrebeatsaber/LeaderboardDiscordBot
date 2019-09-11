@@ -24,8 +24,9 @@ dat = {
                 "Koi no Hime Hime Pettanko",
                 "Redo (TV Size)"
             ],
-            "Header": "**Collegiate VR Esports Qualification Rankings!**\n",
-            "Format": "Rank: UserName (School) | MostRecentSubmission"
+            "Header": "**Collegiate VR Esports Qualification Rankings!**```\n",
+            "Format": "Rank: UserName | (School) | MostRecentSubmission",
+            "Footer": "\n```"
         }
     ],
 }
@@ -39,7 +40,7 @@ def createPlay(item):
         "averageCut": item['stats']['averageCutScore'],
     }
 
-def createMessage(url, header, formatStr, allowedMaps, playerCount):
+def createMessage(url, header, footer, formatStr, allowedMaps, playerCount):
     data = requests.get(url=url).json()
     users = {}
     teams = {}
@@ -73,16 +74,33 @@ def createMessage(url, header, formatStr, allowedMaps, playerCount):
         users[user]['mostRecent'] = max([dateutil.parser.parse(q['time']) for q in users[user]['plays']])
         users[user]['averageAccuracy'] = sum([s['accuracy'] for s in users[user]['plays']]) / float(len(users[user]['plays']))
     sorted_users = sorted(users, key=lambda u: -users[u]['score'])
-    message = header + formatStr + "\n\n"
+
+    rankPad = max(len(str(min(playerCount, len(sorted_users)))), len("Rank"))
+    userPad = max(len(max(sorted_users, key=len)), len("UserName"))
+    teamPad = max(len(users[max(users, key=lambda k: len(users[k]['team']))]['team']), len("Team"))
+    recentPad = 0
+    averageAccPad = max(6, len("AverageAccuracy"))
+    scorePad = max(len(str(users[max(users, key=lambda k: len(str(users[k]['score'])))]['score'])), len("Score"))
+    playsPad = max(len(str(len(users[max(users, key=lambda k: len(str(users[k]['plays'])))]['plays']))), len("Plays"))
+
+    modFormat = formatStr.replace("Rank", "Rank".ljust(rankPad, ' '))
+    modFormat = modFormat.replace("UserName", "UserName".ljust(userPad, ' '))
+    modFormat = modFormat.replace("Team", "Team".ljust(teamPad, ' '))
+    modFormat = modFormat.replace("AverageAccuracy", "AverageAccuracy".ljust(averageAccPad, ' '))
+    modFormat = modFormat.replace("Score", "Score".ljust(scorePad, ' '))
+    modFormat = modFormat.replace("Plays", "Plays".ljust(playsPad, ' '))
+
+    message = header + modFormat + "\n\n"
     for i in range(min(playerCount, len(sorted_users))):
-        m = formatStr.replace("Rank", str(i + 1).ljust(len(str(min(playerCount, len(sorted_users)))), ' '))
-        m = m.replace("UserName", sorted_users[i].ljust(len(max(sorted_users, key=len)), ' '))
-        m = m.replace("(Team)", ("(" + users[sorted_users[i]]['team'] + ")").ljust(len(users[max(users, key=lambda k: len(users[k]['team']))]['team']) + 2, ' '))
+        m = formatStr.replace("Rank", str(i + 1).ljust(rankPad, ' '))
+        m = m.replace("UserName", sorted_users[i].ljust(userPad, ' '))
+        m = m.replace("Team", (users[sorted_users[i]]['team']).ljust(teamPad, ' '))
         m = m.replace("MostRecentSubmission", users[sorted_users[i]]['mostRecent'].astimezone(dateutil.tz.tzutc()).strftime("%B %d, %H:%M:%S"))
-        m = m.replace("AverageAccuracy", "%.2f" % (100 * users[sorted_users[i]]['averageAccuracy']))
-        m = m.replace("**Score**", ("**%d**" % users[sorted_users[i]]['score']).ljust(len(users[max(users, key=lambda k: len(str(users[k]['score'])))]['team']) + 4, ' '))
-        m = m.replace("Plays", ("%d" % len(users[sorted_users[i]]['plays'])).ljust(len(str(len(users[max(users, key=lambda k: len(str(users[k]['plays'])))]['plays']))), ' '))
+        m = m.replace("AverageAccuracy", ("%.2f%%" % (100 * users[sorted_users[i]]['averageAccuracy'])).ljust(averageAccPad, ' '))
+        m = m.replace("Score", ("%d" % users[sorted_users[i]]['score']).ljust(scorePad, ' '))
+        m = m.replace("Plays", ("%d" % len(users[sorted_users[i]]['plays'])).ljust(playsPad, ' '))
         message += m + "\n"
+    message += footer
     return message
 
 def printMessage(message):
@@ -92,7 +110,7 @@ def printMessage(message):
 async def on_ready():
     print("Logged into discord!")
 
-async def background_loop(guild, channel, url, header, formatString, allowedMaps, delay, topPlayers):
+async def background_loop(guild, channel, url, header, footer, formatString, allowedMaps, delay, topPlayers):
     await client.wait_until_ready()
     while not client.is_closed:
         await client.send_message(channel, createMessage(url, header, formatString, allowedMaps, topPlayers))
@@ -104,7 +122,7 @@ if __name__ == "__main__":
             json.dump(dat, q, indent=4)
     with open("settings.json", "r") as q:
         dat = json.load(q)
-    createMessage(dat['GetScoresAPI'], dat['Messages'][0]['Header'], dat['Messages'][0]['Format'], dat['Messages'][0]['AllowedMaps'], dat['Messages'][0]['TopPlayers'])
+    createMessage(dat['GetScoresAPI'], dat['Messages'][0]['Header'], dat['Messages'][0]['Footer'], dat['Messages'][0]['Format'], dat['Messages'][0]['AllowedMaps'], dat['Messages'][0]['TopPlayers'])
     with open("discord.key", "r") as f:
         client.run(f.readline())
         for item in dat['Messages']:
@@ -113,4 +131,4 @@ if __name__ == "__main__":
                 channel = discord.utils.get(guild.channels, name=item['ChannelName'])
             else:
                 channel = client.get_channel(item['ChannelID'])
-            client.loop.create_task(background_loop(guild, channel, dat['GetScoresAPI'], item['Header'], item['Format'], item['AllowedMaps'], item['Delay'], item['TopPlayers']))
+            client.loop.create_task(background_loop(guild, channel, dat['GetScoresAPI'], item['Header'], item['Footer'], item['Format'], item['AllowedMaps'], item['Delay'], item['TopPlayers']))
