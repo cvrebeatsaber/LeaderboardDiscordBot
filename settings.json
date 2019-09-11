@@ -1,0 +1,19 @@
+{
+    "GetScoresAPI": "https://cvrescores.herokuapp.com/api/scores?access_token=iuzIoEccueRwNpUf1spQfnIA5Y4IVMZcoCcy0U5YLmNEv6bQ0RXfydx86ZR9EUj0",
+    "Messages": [
+        {
+            "ServerName": "Collegiate VR Esports",
+            "ChannelID": null,
+            "ChannelName": "it-has-things",
+            "Delay": 3600,
+            "TopPlayers": 20,
+            "AllowedMaps": [
+                "Chikatto Chika Chika",
+                "Koi no Hime Hime Pettanko",
+                "Redo (TV Size)"
+            ],
+            "Header": "**Collegiate VR Esports Qualification Rankings!**\n",
+            "Format": "Rank: UserName (Team) **Score** | Plays | MostRecentSubmission"
+        }
+    ]
+}
