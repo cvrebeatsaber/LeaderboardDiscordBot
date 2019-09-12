@@ -6,19 +6,19 @@ import discord.utils
 import requests
 import datetime
 import dateutil.parser
+from functions import *
 
 READY_STATUS = "Discord Bot now online!"
 
-global scoreMessage
 client = discord.Client()
 dat = {
     "GetScoresAPI": "https://cvrescores.herokuapp.com/api/scores?access_token=iuzIoEccueRwNpUf1spQfnIA5Y4IVMZcoCcy0U5YLmNEv6bQ0RXfydx86ZR9EUj0",
+    "Delay": 3600,
     "Messages": [
         {
             "ServerName": "BOT",
             "ChannelID": None,
             "ChannelName": "general",
-            "Delay": 3600,
             "TopPlayers": 20,
             "AllowedMaps": [
                 "Chikatto Chika Chika",
@@ -32,6 +32,9 @@ dat = {
     ],
 }
 
+savedScoreMessages = {}
+guilds = []
+
 def createPlay(item):
     return {
         "mapName": item['mapName'],
@@ -41,10 +44,15 @@ def createPlay(item):
         "averageCut": item['stats']['averageCutScore'],
     }
 
-def createMessage(url, header, footer, formatStr, allowedMaps, playerCount):
+def createMessage(url, messageArg):
+    allowedMaps = messageArg['AllowedMaps']
+    playerCount = messageArg['TopPlayers']
+    header = messageArg['Header']
+    footer = messageArg['Footer']
+    formatStr = messageArg['Format']
+
     data = requests.get(url=url).json()
     users = {}
-    teams = {}
     for item in data:
         if item['mapName'] in allowedMaps:
             if item['username'] not in users.keys():
@@ -75,32 +83,26 @@ def createMessage(url, header, footer, formatStr, allowedMaps, playerCount):
         users[user]['mostRecent'] = max([dateutil.parser.parse(q['time']) for q in users[user]['plays']])
         users[user]['AverageAccuracy'] = sum([s['accuracy'] for s in users[user]['plays']]) / float(len(users[user]['plays']))
     sorted_users = sorted(users, key=lambda u: -users[u]['score'])
+    count = min(playerCount, len(sorted_users))
 
-    rankPad = max(len(str(min(playerCount, len(sorted_users)))), len("Rank"))
-    userPad = max(len(max(sorted_users, key=len)), len("UserName"))
-    teamPad = max(len(users[max(users, key=lambda k: len(users[k]['team']))]['team']), len("Team"))
-    recentPad = 0
-    averageAccPad = max(6, len("AverageAccuracy"))
-    scorePad = max(len(str(users[max(users, key=lambda k: len(str(users[k]['score'])))]['score'])), len("Score"))
-    playsPad = max(len(str(len(users[max(users, key=lambda k: len(str(users[k]['plays'])))]['plays']))), len("Plays"))
+    tableHeader = formatStr
 
-    modFormat = formatStr.replace("Rank", "Rank".ljust(rankPad, ' '))
-    modFormat = modFormat.replace("UserName", "UserName".ljust(userPad, ' '))
-    modFormat = modFormat.replace("Team", "Team".ljust(teamPad, ' '))
-    modFormat = modFormat.replace("AverageAccuracy", "AverageAccuracy".ljust(averageAccPad, ' '))
-    modFormat = modFormat.replace("Score", "Score".ljust(scorePad, ' '))
-    modFormat = modFormat.replace("Plays", "Plays".ljust(playsPad, ' '))
-
-    message = header + modFormat + "\n\n"
-    for i in range(min(playerCount, len(sorted_users))):
-        m = formatStr.replace("Rank", str(i + 1).ljust(rankPad, ' '))
-        m = m.replace("UserName", sorted_users[i].ljust(userPad, ' '))
-        m = m.replace("Team", (users[sorted_users[i]]['team']).ljust(teamPad, ' '))
-        m = m.replace("MostRecentSubmission", users[sorted_users[i]]['mostRecent'].astimezone(dateutil.tz.tzutc()).strftime("%B %d, %H:%M:%S"))
-        m = m.replace("AverageAccuracy", ("%.2f%%" % (100 * users[sorted_users[i]]['AverageAccuracy'])).ljust(averageAccPad, ' '))
-        m = m.replace("Score", ("%d" % users[sorted_users[i]]['score']).ljust(scorePad, ' '))
-        m = m.replace("Plays", ("%d" % len(users[sorted_users[i]]['plays'])).ljust(playsPad, ' '))
+    for item in messageArg['FormatConversion']:
+        if item['PadOption'] == "Normal":
+            item['Pad'] = max(max([len(item['Function'](users, sorted_users, i)) for i in range(count)]), len(item['Replacement']))
+            if item['Name'] == "Rank":
+                item['Pad'] = max(len(str(count)), len("Rank"))
+            tableHeader = tableHeader.replace(item['Replacement'], item['Replacement'].ljust(item['Pad'], ' '))
+    message = header + tableHeader + "\n"
+    for i in range(count):
+        m = formatStr
+        for item in messageArg['FormatConversion']:
+            v = item['Function'](users, sorted_users, i)
+            if item['PadOption'] == "Normal":
+                v = v.ljust(item['Pad'], ' ')
+            m = m.replace(item['Replacement'], v)
         message += m + "\n"
+
     message += footer
     return message
 
@@ -110,32 +112,77 @@ def printMessage(message):
 @client.event
 async def on_ready():
     print("Logged into discord!")
-    guild = discord.utils.get(client.guilds, name=dat['Messages'][0]['ServerName'])
-    channel = discord.utils.get(guild.channels, name=dat['Messages'][0]['ChannelName'])
-    await channel.send('Ready to go!!')
 
 @client.event
 async def on_message(message):
-    global scoreMessage
-    print(message.content)
-    channel = message.channel
-    if 'hot' in message.content:
-        await channel.send('HOT STUFF IS COMING')
-    if 'score' in message.content:
-        await message.delete()
-        await scoreMessage.delete()
-        createMessage(dat['GetScoresAPI'], dat['Messages'][0]['Header'], dat['Messages'][0]['Footer'], dat['Messages'][0]['Format'], dat['Messages'][0]['AllowedMaps'], dat['Messages'][0]['TopPlayers'])
-        for item in dat['Messages']:
-            guild = discord.utils.get(client.guilds, name=item['ServerName'])
-            await channel.send(createMessage(dat['GetScoresAPI'], item['Header'], item['Footer'], item['Format'], item['AllowedMaps'], item['TopPlayers']))
-    if '!logout' in message.content:
-        await message.delete()
-        await client.logout()
-    if 'Rank: UserName' in message.content:
-        scoreMessage = message
-    if 'Ready to go!!' in message.content:
-        scoreMessage = message
+    print(str(message.author.id) + ": " + message.content)
+    if str(message.author.id) in ids:
+        # sudo
+        if message.content.startswith("killNow"):
+            # Kill
+            # for m in savedScoreMessages.values():
+            #     await m.delete()
+            try:
+                await message.delete()
+            except:
+                # Perms
+                pass
+            print("Killing self!")
+            await client.logout()
+        elif message.content.startswith("goNow"):
+            # Go now
+            try:
+                await message.delete()
+            except:
+                # Perms
+                pass
+            await sendNow()
+
+async def getChannel():
+    guild = discord.utils.get(guilds, name=item['ServerName'])
+    if not guild:
+        return None
+    chns = await guild.fetch_channels()
+    if item['ChannelName']:
+        return discord.utils.get(chns, name=item['ChannelName'])
+    else:
+        return client.get_channel(item['ChannelID'])
+
+async def sendNow():
+    for item in dat['Messages']:
+        channel = await getChannel()
+        if not channel:
+            continue
+        if channel.id in savedScoreMessages.keys():
+            # Get message
+            await savedScoreMessages[channel.id].delete()
+        msg = await channel.send(createMessage(dat['GetScoresAPI'], item))
+        savedScoreMessages[channel.id] = msg
+
+async def checkExistingMessages():
+    for item in dat['Messages']:
+        channel = await getChannel()
+        if not channel:
+            continue
+        async for message in channel.history():
+            if message.author == client.user:
+                savedScoreMessages[channel.id] = message
+                break
         
+async def background_loop():
+    global guilds
+    print("Entering background loop!")
+    await client.wait_until_ready()
+    guilds = await client.fetch_guilds().flatten()
+    await asyncio.sleep(5)
+    print("Got guilds")
+    while True:
+        print("Checking existing messages")
+        await checkExistingMessages()
+        print("Batch sending messages: " + str(len(dat['Messages'])))
+        await sendNow()
+        await asyncio.sleep(dat['Delay'])
+    print("EXITING FOR SOME REASON!")
 
 if __name__ == "__main__":
     if not os.path.exists("settings.json"):
@@ -143,6 +190,28 @@ if __name__ == "__main__":
             json.dump(dat, q, indent=4)
     with open("settings.json", "r") as q:
         dat = json.load(q)
-    createMessage(dat['GetScoresAPI'], dat['Messages'][0]['Header'], dat['Messages'][0]['Footer'], dat['Messages'][0]['Format'], dat['Messages'][0]['AllowedMaps'], dat['Messages'][0]['TopPlayers'])
+    for item in dat['Messages']:
+        for f in item['FormatConversion']:
+            if f['Name'] == "Rank":
+                f['Function'] = getRank
+            elif f['Name'] == "UserName":
+                f['Function'] = getUserName
+            elif f['Name'] == "Team":
+                f['Function'] = getTeam
+            elif f['Name'] == "Most Recently Played":
+                f['Function'] = getMostRecent
+            elif f['Name'] == "Average Accuracy":
+                f['Function'] = getAvgAcc
+            elif f['Name'] == "Score":
+                f['Function'] = getScore
+            elif f['Name'] == "Plays":
+                f['Function'] = getPlays
+            else:
+                raise Exception("Unsupported format for object: " + str(f))
+    # createMessage(dat['GetScoresAPI'], dat['Messages'][0]['Header'], dat['Messages'][0]['Footer'], dat['Messages'][0]['Format'], dat['Messages'][0]['AllowedMaps'], dat['Messages'][0]['TopPlayers'])
+    if os.path.exists("powerUsers"):
+        with open("powerUsers", "r") as q:
+            ids = [item.strip() for item in q.readlines()]
     with open("discord.key", "r") as f:
+        client.loop.create_task(background_loop())
         client.run(f.readline())

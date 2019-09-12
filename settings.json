@@ -1,11 +1,11 @@
 {
     "GetScoresAPI": "https://cvrescores.herokuapp.com/api/scores?access_token=iuzIoEccueRwNpUf1spQfnIA5Y4IVMZcoCcy0U5YLmNEv6bQ0RXfydx86ZR9EUj0",
+    "Delay": 3600,
     "Messages": [
         {
-            "ServerName": "Collegiate VR Esports",
+            "ServerName": "SUMMER CVRE",
             "ChannelID": null,
             "ChannelName": "it-has-things",
-            "Delay": 3600,
             "TopPlayers": 20,
             "AllowedMaps": [
                 "Chikatto Chika Chika",
@@ -13,7 +13,51 @@
                 "Redo (TV Size)"
             ],
             "Header": "**Collegiate VR Esports Qualification Rankings!**```\n",
-            "Format": "Rank: UserName | Score | AverageAccuracy | Plays | MostRecentSubmission",
+            "Format": "Rank: Username | Score | Plays | Avg. Acc | Most Recent Submission",
+            "FormatConversion": [
+                {
+                    "Name": "Rank",
+                    "Description": "The rank of the player",
+                    "Replacement": "Rank",
+                    "PadOption": "Normal"
+                },
+                {
+                    "Name": "Team",
+                    "Description": "The team/school of the player",
+                    "Replacement": "Team",
+                    "PadOption": "Normal"
+                },
+                {
+                    "Name": "UserName",
+                    "Description": "The username of the player",
+                    "Replacement": "Username",
+                    "PadOption": "Normal"
+                },
+                {
+                    "Name": "Most Recently Played",
+                    "Description": "The most recently played map time in UTC+0000",
+                    "Replacement": "Most Recent Submission",
+                    "PadOption": "Normal"
+                },
+                {
+                    "Name": "Average Accuracy",
+                    "Description": "The average accuracy of the player",
+                    "Replacement": "Avg. Acc",
+                    "PadOption": "Normal"
+                },
+                {
+                    "Name": "Score",
+                    "Description": "The cumulative score of the player",
+                    "Replacement": "Score",
+                    "PadOption": "Normal"
+                },
+                {
+                    "Name": "Plays",
+                    "Description": "The count of plays of the player",
+                    "Replacement": "Plays",
+                    "PadOption": "Normal"
+                }
+            ],
             "Footer": "\n```"
         }
     ]
