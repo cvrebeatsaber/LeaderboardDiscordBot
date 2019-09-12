@@ -3,9 +3,9 @@
     "Delay": 3600,
     "Messages": [
         {
-            "ServerName": "SUMMER CVRE",
+            "ServerName": "Collegiate VR Esports",
             "ChannelID": null,
-            "ChannelName": "it-has-things",
+            "ChannelName": "quals-rankings",
             "TopPlayers": 20,
             "AllowedMaps": [
                 "Chikatto Chika Chika",
@@ -13,7 +13,7 @@
                 "Redo (TV Size)"
             ],
             "Header": "**Collegiate VR Esports Qualification Rankings!**```\n",
-            "Format": "Rank: Username | Score | Plays | Avg. Acc | Most Recent Submission",
+            "Format": "Rank: Username | Score | Plays",
             "FormatConversion": [
                 {
                     "Name": "Rank",
