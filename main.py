@@ -9,14 +9,15 @@ import dateutil.parser
 
 READY_STATUS = "Discord Bot now online!"
 
+global scoreMessage
 client = discord.Client()
 dat = {
     "GetScoresAPI": "https://cvrescores.herokuapp.com/api/scores?access_token=iuzIoEccueRwNpUf1spQfnIA5Y4IVMZcoCcy0U5YLmNEv6bQ0RXfydx86ZR9EUj0",
     "Messages": [
         {
-            "ServerName": "Collegiate VR Esports",
+            "ServerName": "BOT",
             "ChannelID": None,
-            "ChannelName": "it-has-things",
+            "ChannelName": "general",
             "Delay": 3600,
             "TopPlayers": 20,
             "AllowedMaps": [
@@ -72,7 +73,7 @@ def createMessage(url, header, footer, formatStr, allowedMaps, playerCount):
     for user in users.keys():
         users[user]['score'] = sum([s['score'] for s in users[user]['plays']])
         users[user]['mostRecent'] = max([dateutil.parser.parse(q['time']) for q in users[user]['plays']])
-        users[user]['averageAccuracy'] = sum([s['accuracy'] for s in users[user]['plays']]) / float(len(users[user]['plays']))
+        users[user]['AverageAccuracy'] = sum([s['accuracy'] for s in users[user]['plays']]) / float(len(users[user]['plays']))
     sorted_users = sorted(users, key=lambda u: -users[u]['score'])
 
     rankPad = max(len(str(min(playerCount, len(sorted_users)))), len("Rank"))
@@ -96,7 +97,7 @@ def createMessage(url, header, footer, formatStr, allowedMaps, playerCount):
         m = m.replace("UserName", sorted_users[i].ljust(userPad, ' '))
         m = m.replace("Team", (users[sorted_users[i]]['team']).ljust(teamPad, ' '))
         m = m.replace("MostRecentSubmission", users[sorted_users[i]]['mostRecent'].astimezone(dateutil.tz.tzutc()).strftime("%B %d, %H:%M:%S"))
-        m = m.replace("AverageAccuracy", ("%.2f%%" % (100 * users[sorted_users[i]]['averageAccuracy'])).ljust(averageAccPad, ' '))
+        m = m.replace("AverageAccuracy", ("%.2f%%" % (100 * users[sorted_users[i]]['AverageAccuracy'])).ljust(averageAccPad, ' '))
         m = m.replace("Score", ("%d" % users[sorted_users[i]]['score']).ljust(scorePad, ' '))
         m = m.replace("Plays", ("%d" % len(users[sorted_users[i]]['plays'])).ljust(playsPad, ' '))
         message += m + "\n"
@@ -104,17 +105,37 @@ def createMessage(url, header, footer, formatStr, allowedMaps, playerCount):
     return message
 
 def printMessage(message):
-    print("Message Received from Author: (" + str(message.author) + ", " + str(message.author.id) + ") with content: " + message.content)
+    print("Message Received from Author: (" + str(message.author) + ", " + str(message.author.id) + ") with content: " + message.content + " and message id: " + message.id.toString)
 
 @client.event
 async def on_ready():
     print("Logged into discord!")
+    guild = discord.utils.get(client.guilds, name=dat['Messages'][0]['ServerName'])
+    channel = discord.utils.get(guild.channels, name=dat['Messages'][0]['ChannelName'])
+    await channel.send('Ready to go!!')
 
-async def background_loop(guild, channel, url, header, footer, formatString, allowedMaps, delay, topPlayers):
-    await client.wait_until_ready()
-    while not client.is_closed:
-        await client.send_message(channel, createMessage(url, header, formatString, allowedMaps, topPlayers))
-        await asyncio.sleep(delay)
+@client.event
+async def on_message(message):
+    global scoreMessage
+    print(message.content)
+    channel = message.channel
+    if 'hot' in message.content:
+        await channel.send('HOT STUFF IS COMING')
+    if 'score' in message.content:
+        await message.delete()
+        await scoreMessage.delete()
+        createMessage(dat['GetScoresAPI'], dat['Messages'][0]['Header'], dat['Messages'][0]['Footer'], dat['Messages'][0]['Format'], dat['Messages'][0]['AllowedMaps'], dat['Messages'][0]['TopPlayers'])
+        for item in dat['Messages']:
+            guild = discord.utils.get(client.guilds, name=item['ServerName'])
+            await channel.send(createMessage(dat['GetScoresAPI'], item['Header'], item['Footer'], item['Format'], item['AllowedMaps'], item['TopPlayers']))
+    if '!logout' in message.content:
+        await message.delete()
+        await client.logout()
+    if 'Rank: UserName' in message.content:
+        scoreMessage = message
+    if 'Ready to go!!' in message.content:
+        scoreMessage = message
+        
 
 if __name__ == "__main__":
     if not os.path.exists("settings.json"):
@@ -125,10 +146,3 @@ if __name__ == "__main__":
     createMessage(dat['GetScoresAPI'], dat['Messages'][0]['Header'], dat['Messages'][0]['Footer'], dat['Messages'][0]['Format'], dat['Messages'][0]['AllowedMaps'], dat['Messages'][0]['TopPlayers'])
     with open("discord.key", "r") as f:
         client.run(f.readline())
-        for item in dat['Messages']:
-            guild = discord.utils.get(client.guilds, name=item['ServerName'])
-            if 'ChannelName' in item.keys() and item['ChannelName']:
-                channel = discord.utils.get(guild.channels, name=item['ChannelName'])
-            else:
-                channel = client.get_channel(item['ChannelID'])
-            client.loop.create_task(background_loop(guild, channel, dat['GetScoresAPI'], item['Header'], item['Footer'], item['Format'], item['AllowedMaps'], item['Delay'], item['TopPlayers']))
