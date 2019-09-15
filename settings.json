@@ -7,11 +7,11 @@
             "ChannelID": null,
             "ChannelName": "quals-rankings",
             "TopPlayers": 20,
-            "AllowedMaps": [
-                "Chikatto Chika Chika",
-                "Koi no Hime Hime Pettanko",
-                "Redo (TV Size)"
-            ],
+            "AllowedMaps": {
+                "custom_level_E46558241BEF6FC4008034A73A2CE36767F58800": 7,
+                "custom_level_59EDC79516ACBC2EDAA130542F8D3A204585BFF0": 7,
+                "custom_level_A82D821528D118F7AB16F7B237096D6779A33056": 7
+            },
             "Header": "**Collegiate VR Esports Qualification Rankings!**```\n",
             "Format": "Rank: Username | Score | Plays",
             "FormatConversion": [
