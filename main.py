@@ -38,6 +38,8 @@ guilds = []
 def createPlay(item):
     return {
         "mapName": item['mapName'],
+        "difficulty": item['difficulty'],
+        "levelId": item['levelId'],
         "score": item['score'],
         "accuracy": item['accuracy'],
         "time": item['time'],
@@ -54,10 +56,15 @@ def createMessage(url, messageArg):
     data = requests.get(url=url).json()
     users = {}
     for item in data:
-        if item['mapName'] in allowedMaps:
+        mapAllowed = False
+        for m in allowedMaps.keys():
+            if item['levelId'].startswith(m) and item['difficulty'] == allowedMaps[m]:
+                mapAllowed = True
+                break
+        if mapAllowed:
             if item['username'] not in users.keys():
                 users[item['username']] = {
-                    "team": item['team'],
+                    "team": item['team'] if "team" in item.keys() else "",
                     "plays": [
                         createPlay(item)
                     ]
@@ -66,7 +73,7 @@ def createMessage(url, messageArg):
                 # Double check that only the best map scores are calculated
                 replacedPlay = 0
                 for existingItem in users[item['username']]['plays']:
-                    if existingItem['mapName'] == item['mapName']:
+                    if existingItem['mapName'] == item['mapName'] and existingItem['levelId'] == item['levelId'] and existingItem['difficulty'] == item['difficulty']:
                         # Compare accuracy, determine new best map
                         if item['score'] >= existingItem['score']:
                             # Replace old item
@@ -138,7 +145,7 @@ async def on_message(message):
                 pass
             await sendNow()
 
-async def getChannel():
+async def getChannel(item):
     guild = discord.utils.get(guilds, name=item['ServerName'])
     if not guild:
         return None
@@ -150,7 +157,7 @@ async def getChannel():
 
 async def sendNow():
     for item in dat['Messages']:
-        channel = await getChannel()
+        channel = await getChannel(item)
         if not channel:
             continue
         if channel.id in savedScoreMessages.keys():
@@ -161,7 +168,7 @@ async def sendNow():
 
 async def checkExistingMessages():
     for item in dat['Messages']:
-        channel = await getChannel()
+        channel = await getChannel(item)
         if not channel:
             continue
         async for message in channel.history():
