@@ -43,7 +43,7 @@ def createPlay(item):
         "score": item['score'],
         "accuracy": item['accuracy'],
         "time": item['time'],
-        "averageCut": item['stats']['averageCutScore'],
+        "averageCut": item['stats']['averageCutScore'] if 'stats' in item.keys() and 'averageCutScore' in item['stats'].keys() else -1,
     }
 
 def createMessage(url, messageArg):
@@ -73,7 +73,7 @@ def createMessage(url, messageArg):
                 # Double check that only the best map scores are calculated
                 replacedPlay = 0
                 for existingItem in users[item['username']]['plays']:
-                    if existingItem['mapName'] == item['mapName'] and existingItem['levelId'] == item['levelId'] and existingItem['difficulty'] == item['difficulty']:
+                    if existingItem['mapName'] == item['mapName'] and existingItem['levelId'] in item['levelId'] and existingItem['difficulty'] == item['difficulty']:
                         # Compare accuracy, determine new best map
                         if item['score'] >= existingItem['score']:
                             # Replace old item
@@ -85,11 +85,18 @@ def createMessage(url, messageArg):
                         break
                 if replacedPlay == 0:
                     users[item['username']]['plays'].append(createPlay(item))
+    with open("users.json", 'w') as f:
+        json.dump(users, f)
     for user in users.keys():
         users[user]['score'] = sum([s['score'] for s in users[user]['plays']])
         users[user]['mostRecent'] = max([dateutil.parser.parse(q['time']) for q in users[user]['plays']])
         users[user]['AverageAccuracy'] = sum([s['accuracy'] for s in users[user]['plays']]) / float(len(users[user]['plays']))
     sorted_users = sorted(users, key=lambda u: -users[u]['score'])
+    print("Dumping sorted users to JSON!")
+    with open("sorted_users.json", 'w') as f:
+        json.dump(sorted_users, f)
+    with open("data.json", 'w') as f:
+        json.dump(data, f)
     count = min(playerCount, len(sorted_users))
 
     tableHeader = formatStr
@@ -101,6 +108,7 @@ def createMessage(url, messageArg):
                 item['Pad'] = max(len(str(count)), len("Rank"))
             tableHeader = tableHeader.replace(item['Replacement'], item['Replacement'].ljust(item['Pad'], ' '))
     message = header + tableHeader + "\n"
+    mes = []
     for i in range(count):
         m = formatStr
         for item in messageArg['FormatConversion']:
@@ -108,13 +116,15 @@ def createMessage(url, messageArg):
             if item['PadOption'] == "Normal":
                 v = v.ljust(item['Pad'], ' ')
             m = m.replace(item['Replacement'], v)
+        if len(message) + len(m) + 4 > 1000:
+            mes.append(message + "\n```")
+            message = "```"
         message += m + "\n"
 
     message += footer
-    return message
-
-def printMessage(message):
-    print("Message Received from Author: (" + str(message.author) + ", " + str(message.author.id) + ") with content: " + message.content + " and message id: " + message.id.toString)
+    message += "\n" + messageArg["SpecialMessage"]
+    mes.append(message)
+    return mes
 
 @client.event
 async def on_ready():
@@ -122,7 +132,10 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    print(str(message.author.id) + ": " + message.content)
+    try:
+        print(str(message.author.id) + ": " + str(message.content))
+    except:
+        print("message content unprintable!")
     if str(message.author.id) in ids:
         # sudo
         if message.content.startswith("killNow"):
@@ -162,9 +175,18 @@ async def sendNow():
             continue
         if channel.id in savedScoreMessages.keys():
             # Get message
-            await savedScoreMessages[channel.id].delete()
-        msg = await channel.send(createMessage(dat['GetScoresAPI'], item))
-        savedScoreMessages[channel.id] = msg
+            print("Deleteing: " + str(len(savedScoreMessages[channel.id])) + " messages!")
+            for di in range(len(savedScoreMessages[channel.id])):
+                try:
+                    await savedScoreMessages[channel.id][0].delete()
+                    del(savedScoreMessages[channel.id][0])
+                except discord.errors.NotFound:
+                    del(savedScoreMessages[channel.id][0])
+        for q in createMessage(dat['GetScoresAPI'], item):
+            msg = await channel.send(q)
+            if channel.id not in savedScoreMessages.keys():
+                savedScoreMessages[channel.id] = []
+            savedScoreMessages[channel.id].append(msg)
 
 async def checkExistingMessages():
     for item in dat['Messages']:
@@ -173,15 +195,16 @@ async def checkExistingMessages():
             continue
         async for message in channel.history():
             if message.author == client.user:
-                savedScoreMessages[channel.id] = message
-                break
+                if channel.id not in savedScoreMessages.keys():
+                    savedScoreMessages[channel.id] = []
+                savedScoreMessages[channel.id].append(message)
         
 async def background_loop():
     global guilds
     print("Entering background loop!")
     await client.wait_until_ready()
     guilds = await client.fetch_guilds().flatten()
-    await asyncio.sleep(5)
+    await asyncio.sleep(2)
     print("Got guilds")
     while True:
         print("Checking existing messages")
