@@ -54,6 +54,8 @@ def createMessage(url, messageArg):
     formatStr = messageArg['Format']
 
     data = requests.get(url=url).json()
+    with open("data.json", 'w') as f:
+        json.dump(data, f)
     users = {}
     for item in data:
         mapAllowed = False
@@ -87,6 +89,11 @@ def createMessage(url, messageArg):
                     users[item['username']]['plays'].append(createPlay(item))
     with open("users.json", 'w') as f:
         json.dump(users, f)
+    if len(users) == 0:
+        # No users have completed any scores for accepted maps!
+        message = "```\nNo users have completed any scores for any qualifier maps!\nQualifier map IDs:\n"
+        message += "\n".join(allowedMaps) + "```"
+        return [message]
     for user in users.keys():
         users[user]['score'] = sum([s['score'] for s in users[user]['plays']])
         users[user]['mostRecent'] = max([dateutil.parser.parse(q['time']) for q in users[user]['plays']])
@@ -95,8 +102,6 @@ def createMessage(url, messageArg):
     print("Dumping sorted users to JSON!")
     with open("sorted_users.json", 'w') as f:
         json.dump(sorted_users, f)
-    with open("data.json", 'w') as f:
-        json.dump(data, f)
     count = min(playerCount, len(sorted_users))
 
     tableHeader = formatStr
