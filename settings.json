@@ -1,19 +1,20 @@
 {
     "GetScoresAPI": "https://cvrescores.herokuapp.com/api/scores?access_token=iuzIoEccueRwNpUf1spQfnIA5Y4IVMZcoCcy0U5YLmNEv6bQ0RXfydx86ZR9EUj0",
-    "Delay": 3600,
+    "Delay": 300,
     "Messages": [
         {
             "ServerName": "Collegiate VR Esports",
             "ChannelID": null,
             "ChannelName": "quals-rankings",
-            "TopPlayers": 20,
+            "TopPlayers": 420,
             "AllowedMaps": {
-                "custom_level_E46558241BEF6FC4008034A73A2CE36767F58800": 7,
-                "custom_level_59EDC79516ACBC2EDAA130542F8D3A204585BFF0": 7,
-                "custom_level_A82D821528D118F7AB16F7B237096D6779A33056": 7
+                "custom_level_D0B25B0B05C7B14C5EA55774D1F751705F360026": 3,
+                "custom_level_AB36FD22C1060AC3696AF0CD6BD1E25DB3AEBF18": 9,
+                "custom_level_B3BD1BBBB18A53381E183EEADF78CCC5E523F07D": 9
             },
             "Header": "**Collegiate VR Esports Qualification Rankings!**```\n",
             "Format": "Rank: Username | Score | Plays",
+            "SpecialMessage": "Please download the latest mod from <#621461256230141963>!",
             "FormatConversion": [
                 {
                     "Name": "Rank",
